@@ -1,0 +1,24 @@
+EXPORTS
+	?COM_API_UpdateSystemCfg@@YGHPAD@Z	@21
+	COM_API_DowloadFile@12	@2
+	COM_API_DowloadSystemCfg@4	@3
+	COM_API_GetLastError@4	@6
+	COM_API_GetMachineStatus@4	@7
+	COM_API_Home@12	@8
+	COM_API_Jog@12	@9
+	COM_API_OpenLink@8	@10
+	COM_API_PauseAll@0	@11
+	COM_API_ReadData@12	@12
+	COM_API_ReadFileData@16	@13
+	COM_API_ResumeAll@0	@14
+	COM_API_SendData@8	@15
+	COM_API_SetComType@4	@16
+	COM_API_SetOutputBit@8	@17
+	COM_API_StartAutoRun@20	@18
+	COM_API_StopAll@0	@19
+	COM_API_StopAxis@12	@20
+	COM_API_UploadSystemCfg@4	@22
+	COM_API_WriteFileData@16	@23
+	COM_API_DeleteFile@8 	@1
+	COM_API_FastLine3@20	@4
+	COM_API_GetFileName@4	@5
