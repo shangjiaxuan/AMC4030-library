@@ -108,7 +108,7 @@ typedef struct _MACHINE_STATUS_
 	uint32_t	Rsv[4];
 } MACHINE_STATUS, * PMACHINE_STATUS;
 
-CALLBACK_DEF	COM_API_GetMachineStatus(struct _MACHINE_STATUS_* unStatus);
+CALLBACK_DEF	COM_API_GetMachineStatus(MACHINE_STATUS* unStatus);
 
 // Go to location
 // nAxis	: The axis to move
@@ -260,23 +260,37 @@ CALLBACK_DEF	COM_API_SetOutputBit(int OutputID, int nStatus);
 // Puts ini data to controller (convenience function)
 CALLBACK_DEF	COM_API_DowloadSystemCfg(const char* iniPath);
 
-
-
-
 // Gets ini data back from controller (convenience function, guessed)
 CALLBACK_DEF	COM_API_UploadSystemCfg(const char* iniPath);
 
-// Copies specified (nType) file (guessed) to location specified by szPath
+// Puts file to controller
+// szPath		: The file
+// nType		: File type
+//		1 - config file
+//		2 - processing file
+//		3 - firmware update
+//	ShowProcess	: Shows progress in loading bar
 CALLBACK_DEF	COM_API_DowloadFile(const char* szPath, int nType, int ShowProcess);
 
-// command uses len characters in payload, unkown usage
-CALLBACK_DEF	COM_API_DeleteFile(const char* payload, int len);
+typedef struct _FILE_INFO_
+{
+	char filename[11][10];
+	int file_total;
+} FILE_INFO, * PFILE_INFO;
 
-// retrieves some name, unknown usage
-CALLBACK_DEF	COM_API_GetFileName(unsigned char* result);
+// get list of files in controller
+CALLBACK_DEF	COM_API_GetFileName(FILE_INFO* fileinfo);
 
-// Unkown usage
-CALLBACK_DEF	COM_API_StartAutoRun(char a1, char a2, void* Src, int Size, char a5);
+// deletes file from controller
+CALLBACK_DEF	COM_API_DeleteFile(const char* filename, int filename_len);
+
+// Starts script inside controller
+//	Type		- file type, 2 for script
+//	nId			- have to be 1
+//	FileName	- filename in controller, length<9
+//	len			- filename length
+//	isRunOnTime	- whether the script is run on startup
+CALLBACK_DEF	COM_API_StartAutoRun(int Type, int nId, char* FileName, int Len, int isRunOnTime);
 
 // Unkown usage
 CALLBACK_DEF	COM_API_FastLine3(int a1, int a2, int a3, int a4, int a5);

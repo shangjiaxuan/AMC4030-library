@@ -36,8 +36,8 @@ struct AMC4030DLL
 	int(__stdcall* pCOM_API_UploadSystemCfg)(const char* iniPath);
 
 	int(__stdcall* pCOM_API_DeleteFile)(const char* payload, int len);
-	int(__stdcall* pCOM_API_GetFileName)(unsigned char* result);
-	int(__stdcall* pCOM_API_StartAutoRun)(char a1, char a2, void* Src, int Size, char a5);
+	int(__stdcall* pCOM_API_GetFileName)(FILE_INFO* result);
+	int(__stdcall* pCOM_API_StartAutoRun)(int Type, int nId, char* FileName, int Len, int isRunOnTime);
 
 	int(__stdcall* pCOM_API_FastLine3)(int a1, int a2, int a3, int a4, int a5);
 	int(__stdcall* pCOM_API_UpdateSystemCfg)(const char* iniPath);
@@ -410,31 +410,31 @@ CALLBACK_DEF	COM_API_DeleteFile(const char* payload, int len) {
 	return res;
 }
 
-CALLBACK_DEF	COM_API_GetFileName(unsigned char* result) { 
+CALLBACK_DEF	COM_API_GetFileName(FILE_INFO* fileinfo) {
 	tracer::record_guard lck(g_tracer);
-	int res = g_dll.pCOM_API_GetFileName(result);
-	int result_len = strlen((const char*)result)+1;
+	int result_len = sizeof(fileinfo);
 	// record size
 	g_tracer.WriteWord(3 + round_up_4(result_len));
 	// function name
 	g_tracer.WriteWord(19);
-	g_tracer.WriteBuffer(result, result_len);
+	int res = g_dll.pCOM_API_GetFileName(fileinfo);
+	g_tracer.WriteBuffer(fileinfo, result_len);
 	g_tracer.WriteWord(res);
 	return res;
 }
 
-CALLBACK_DEF	COM_API_StartAutoRun(char a1, char a2, void* Src, int Size, char a5) {
+CALLBACK_DEF	COM_API_StartAutoRun(int Type, int nId, char* FileName, int Len, int isRunOnTime) {
 	tracer::record_guard lck(g_tracer);
 	// record size
-	g_tracer.WriteWord(7 + round_up_4(Size));
+	g_tracer.WriteWord(7 + round_up_4(Len));
 	// function name
 	g_tracer.WriteWord(20);
-	g_tracer.WriteWord(a1);
-	g_tracer.WriteWord(a2);
-	g_tracer.WriteBuffer(Src, Size);
-	g_tracer.WriteWord(Size);
-	g_tracer.WriteWord(a5);
-	int res = g_dll.pCOM_API_StartAutoRun(a1, a2, Src, Size, a5);
+	g_tracer.WriteWord(Type);
+	g_tracer.WriteWord(nId);
+	g_tracer.WriteBuffer(FileName, Len);
+	g_tracer.WriteWord(Len);
+	g_tracer.WriteWord(isRunOnTime);
+	int res = g_dll.pCOM_API_StartAutoRun(Type, nId, FileName, Len, isRunOnTime);
 	g_tracer.WriteWord(res);
 	return res;
 }
