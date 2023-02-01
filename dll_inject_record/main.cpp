@@ -48,23 +48,43 @@ struct tracer
 	std::once_flag init_flag;
 	std::mutex trace_mtx;
 	FILE* tracefile;
+	bool in_record = false;
+
+	class record_guard:public std::lock_guard<std::mutex>
+	{
+		tracer& parent;
+	public:
+		record_guard(tracer& target);;
+		~record_guard();
+	};
+
+	// always below lock_guard
+	inline void begin_record()
+	{
+		if(in_record) throw;
+		in_record = true;
+	}
 	inline void WriteWord(int word)
 	{
+		if (!in_record) throw;
 		fwrite(&word, sizeof(word), 1, tracefile);
 	}
 	inline void WriteBuffer(const void* buffer, int size)
 	{
+		if (!in_record) throw;
 		fwrite(buffer, 1, size, tracefile);
 		if (size % 4) {
 			int zero = 0;
 			fwrite(&zero, 1, 4-(size % 4), tracefile);
 		}
 	}
-	inline void flush()
+	inline void end_record()
 	{
+		if (!in_record) throw;
 		fflush(tracefile);
+		in_record = false;
 	}
-}g_tracer;
+} g_tracer;
 
 
 
@@ -123,6 +143,17 @@ void initialize_once()
 	std::call_once(g_tracer.init_flag, initialize_trace);
 }
 
+inline tracer::record_guard::record_guard(tracer& target):std::lock_guard<std::mutex>(target.trace_mtx), parent(target)
+{
+	initialize_once();
+	parent.begin_record();
+}
+
+inline tracer::record_guard::~record_guard()
+{
+	parent.end_record();
+}
+
 inline int round_up_4(int len)
 {
 	return (len+3)/4;
@@ -130,8 +161,7 @@ inline int round_up_4(int len)
 
 // saves 2 word, input nType and output res
 CALLBACK_DEF	COM_API_SetComType(int nType) {
-	initialize_once();
-	std::lock_guard<std::mutex> lck(g_tracer.trace_mtx);
+	tracer::record_guard lck(g_tracer);
 	// record size
 	g_tracer.WriteWord(4);
 	// function name
@@ -139,12 +169,10 @@ CALLBACK_DEF	COM_API_SetComType(int nType) {
 	g_tracer.WriteWord(nType);
 	int res = g_dll.pCOM_API_SetComType(nType);
 	g_tracer.WriteWord(res);
-	g_tracer.flush();
 	return res;
 }
 CALLBACK_DEF	COM_API_OpenLink(int nID, int nBound) { 
-	initialize_once();
-	std::lock_guard<std::mutex> lck(g_tracer.trace_mtx);
+	tracer::record_guard lck(g_tracer);
 	// record size
 	g_tracer.WriteWord(5);
 	// function name
@@ -153,13 +181,11 @@ CALLBACK_DEF	COM_API_OpenLink(int nID, int nBound) {
 	g_tracer.WriteWord(nBound);
 	int res = g_dll.pCOM_API_OpenLink(nID, nBound);
 	g_tracer.WriteWord(res);
-	g_tracer.flush();
 	return res;
 }
 
 CALLBACK_DEF	COM_API_ReadFileData(int nSrc, int StartAdd, int len, unsigned char* pOutput) {
-	initialize_once();
-	std::lock_guard<std::mutex> lck(g_tracer.trace_mtx);
+	tracer::record_guard lck(g_tracer);
 	int res = g_dll.pCOM_API_ReadFileData(nSrc, StartAdd, len, pOutput);
 	// record size
 	g_tracer.WriteWord(6 + round_up_4(len));
@@ -170,12 +196,10 @@ CALLBACK_DEF	COM_API_ReadFileData(int nSrc, int StartAdd, int len, unsigned char
 	g_tracer.WriteWord(len);
 	g_tracer.WriteBuffer(pOutput, len);
 	g_tracer.WriteWord(res);
-	g_tracer.flush();
 	return res;
 }
 CALLBACK_DEF	COM_API_WriteFileData(int nSrc, int StartAdd, int len, const unsigned char* pInput) { 
-	initialize_once();
-	std::lock_guard<std::mutex> lck(g_tracer.trace_mtx);
+	tracer::record_guard lck(g_tracer);
 	// record size
 	g_tracer.WriteWord(6 + round_up_4(len));
 	// function name
@@ -186,13 +210,11 @@ CALLBACK_DEF	COM_API_WriteFileData(int nSrc, int StartAdd, int len, const unsign
 	g_tracer.WriteBuffer(pInput, len);
 	int res = g_dll.pCOM_API_WriteFileData(nSrc, StartAdd, len, pInput);
 	g_tracer.WriteWord(res);
-	g_tracer.flush();
 	return res;
 }
 
 CALLBACK_DEF	COM_API_Jog(int nAxis, float fDis, float Speed) { 
-	initialize_once();
-	std::lock_guard<std::mutex> lck(g_tracer.trace_mtx);
+	tracer::record_guard lck(g_tracer);
 	// record size
 	g_tracer.WriteWord(6);
 	// function name
@@ -205,13 +227,11 @@ CALLBACK_DEF	COM_API_Jog(int nAxis, float fDis, float Speed) {
 	g_tracer.WriteWord(temp);
 	int res = g_dll.pCOM_API_Jog(nAxis, fDis, Speed);
 	g_tracer.WriteWord(res);
-	g_tracer.flush();
 	return res;
 }
 
 CALLBACK_DEF	COM_API_Home(int nXAxisSet, int nYAxisSet, int nZAxisSet) {
-	initialize_once();
-	std::lock_guard<std::mutex> lck(g_tracer.trace_mtx);
+	tracer::record_guard lck(g_tracer);
 	// record size
 	g_tracer.WriteWord(6);
 	// function name
@@ -221,13 +241,11 @@ CALLBACK_DEF	COM_API_Home(int nXAxisSet, int nYAxisSet, int nZAxisSet) {
 	g_tracer.WriteWord(nZAxisSet);
 	int res = g_dll.pCOM_API_Home(nXAxisSet, nYAxisSet, nZAxisSet);
 	g_tracer.WriteWord(res);
-	g_tracer.flush();
 	return res;
 }
 
 CALLBACK_DEF	COM_API_StopAxis(int nXAxisSet, int nYAxisSet, int nZAxisSet) {
-	initialize_once();
-	std::lock_guard<std::mutex> lck(g_tracer.trace_mtx);
+	tracer::record_guard lck(g_tracer);
 	// record size
 	g_tracer.WriteWord(6);
 	// function name
@@ -237,26 +255,22 @@ CALLBACK_DEF	COM_API_StopAxis(int nXAxisSet, int nYAxisSet, int nZAxisSet) {
 	g_tracer.WriteWord(nZAxisSet);
 	int res = g_dll.pCOM_API_StopAxis(nXAxisSet, nYAxisSet, nZAxisSet);
 	g_tracer.WriteWord(res);
-	g_tracer.flush();
 	return res;
 }
 
 CALLBACK_DEF	COM_API_StopAll() {
-	initialize_once();
-	std::lock_guard<std::mutex> lck(g_tracer.trace_mtx);
+	tracer::record_guard lck(g_tracer);
 	// record size
 	g_tracer.WriteWord(3);
 	// function name
 	g_tracer.WriteWord(7);
 	int res = g_dll.pCOM_API_StopAll();
 	g_tracer.WriteWord(res);
-	g_tracer.flush();
 	return res;
 }
 
 CALLBACK_DEF	COM_API_SetOutputBit(int OutputID, int nStatus) { 
-	initialize_once();
-	std::lock_guard<std::mutex> lck(g_tracer.trace_mtx);
+	tracer::record_guard lck(g_tracer);
 	// record size
 	g_tracer.WriteWord(5);
 	// function name
@@ -265,14 +279,12 @@ CALLBACK_DEF	COM_API_SetOutputBit(int OutputID, int nStatus) {
 	g_tracer.WriteWord(nStatus);
 	int res = g_dll.pCOM_API_SetOutputBit(OutputID, nStatus);
 	g_tracer.WriteWord(res);
-	g_tracer.flush();
 	return res;
 }
 
 
 CALLBACK_DEF	COM_API_GetLastError(unsigned int* dwErr) {
-	initialize_once();
-	std::lock_guard<std::mutex> lck(g_tracer.trace_mtx);
+	tracer::record_guard lck(g_tracer);
 	// record size
 	g_tracer.WriteWord(4);
 	// function name
@@ -280,13 +292,11 @@ CALLBACK_DEF	COM_API_GetLastError(unsigned int* dwErr) {
 	int res = g_dll.pCOM_API_GetLastError(dwErr);
 	g_tracer.WriteWord(*dwErr);
 	g_tracer.WriteWord(res);
-	g_tracer.flush();
 	return res;
 }
 
 CALLBACK_DEF	COM_API_DowloadSystemCfg(const char* iniPath) {
-	initialize_once();
-	std::lock_guard<std::mutex> lck(g_tracer.trace_mtx);
+	tracer::record_guard lck(g_tracer);
 	size_t path_len = strlen(iniPath) + 1;
 	// record size
 	g_tracer.WriteWord(3 + round_up_4(path_len));
@@ -295,13 +305,11 @@ CALLBACK_DEF	COM_API_DowloadSystemCfg(const char* iniPath) {
 	g_tracer.WriteBuffer(iniPath, path_len);
 	int res = g_dll.pCOM_API_DowloadSystemCfg(iniPath);
 	g_tracer.WriteWord(res);
-	g_tracer.flush();
 	return res;
 }
 
 CALLBACK_DEF	COM_API_DowloadFile(const char* szPath, int nType, int ShowProcess) { 
-	initialize_once();
-	std::lock_guard<std::mutex> lck(g_tracer.trace_mtx);
+	tracer::record_guard lck(g_tracer);
 	size_t path_len = strlen(szPath) + 1;
 	// record size
 	g_tracer.WriteWord(5 + round_up_4(path_len));
@@ -312,13 +320,11 @@ CALLBACK_DEF	COM_API_DowloadFile(const char* szPath, int nType, int ShowProcess)
 	g_tracer.WriteWord(ShowProcess);
 	int res = g_dll.pCOM_API_DowloadFile(szPath, nType, ShowProcess);
 	g_tracer.WriteWord(res);
-	g_tracer.flush();
 	return res;
 }
 
 CALLBACK_DEF	COM_API_SendData(int nLen, const unsigned char* pData) { 
-	initialize_once();
-	std::lock_guard<std::mutex> lck(g_tracer.trace_mtx);
+	tracer::record_guard lck(g_tracer);
 	// record size
 	g_tracer.WriteWord(5 + round_up_4(nLen));
 	// function name
@@ -327,14 +333,12 @@ CALLBACK_DEF	COM_API_SendData(int nLen, const unsigned char* pData) {
 	g_tracer.WriteBuffer(pData, nLen);
 	int res = g_dll.pCOM_API_SendData(nLen, pData);
 	g_tracer.WriteWord(res);
-	g_tracer.flush();
 	return res;
 }
 
 // unknown output size, ignore in trace
 CALLBACK_DEF	COM_API_ReadData(int nLen, const unsigned char* pInput, unsigned char* pOutput) { 
-	initialize_once();
-	std::lock_guard<std::mutex> lck(g_tracer.trace_mtx);
+	tracer::record_guard lck(g_tracer);
 	// record size
 	g_tracer.WriteWord(5 + round_up_4(nLen));
 	// function name
@@ -343,14 +347,12 @@ CALLBACK_DEF	COM_API_ReadData(int nLen, const unsigned char* pInput, unsigned ch
 	g_tracer.WriteBuffer(pInput, nLen);
 	int res = g_dll.pCOM_API_ReadData(nLen, pInput, pOutput);
 	g_tracer.WriteWord(res);
-	g_tracer.flush();
 	return res;
 }
 
 
 CALLBACK_DEF	COM_API_GetMachineStatus(struct _MACHINE_STATUS_* unStatus) { 
-	initialize_once();
-	std::lock_guard<std::mutex> lck(g_tracer.trace_mtx);
+	tracer::record_guard lck(g_tracer);
 	// record size
 	g_tracer.WriteWord(3 + round_up_4(sizeof(_MACHINE_STATUS_)));
 	// function name
@@ -358,38 +360,32 @@ CALLBACK_DEF	COM_API_GetMachineStatus(struct _MACHINE_STATUS_* unStatus) {
 	int res = g_dll.pCOM_API_GetMachineStatus(unStatus);
 	g_tracer.WriteBuffer(unStatus, sizeof(*unStatus));
 	g_tracer.WriteWord(res);
-	g_tracer.flush();
 	return res;
 }
 
 CALLBACK_DEF	COM_API_PauseAll() {
-	initialize_once();
-	std::lock_guard<std::mutex> lck(g_tracer.trace_mtx);
+	tracer::record_guard lck(g_tracer);
 	// record size
 	g_tracer.WriteWord(3);
 	// function name
 	g_tracer.WriteWord(15);
 	int res = g_dll.pCOM_API_PauseAll();
 	g_tracer.WriteWord(res);
-	g_tracer.flush();
 	return res;
 }
 CALLBACK_DEF	COM_API_ResumeAll() {
-	initialize_once();
-	std::lock_guard<std::mutex> lck(g_tracer.trace_mtx);
+	tracer::record_guard lck(g_tracer);
 	// record size
 	g_tracer.WriteWord(3);
 	// function name
 	g_tracer.WriteWord(16);
 	int res = g_dll.pCOM_API_ResumeAll();
 	g_tracer.WriteWord(res);
-	g_tracer.flush();
 	return res;
 }
 
 CALLBACK_DEF	COM_API_UploadSystemCfg(const char* iniPath) {
-	initialize_once();
-	std::lock_guard<std::mutex> lck(g_tracer.trace_mtx);
+	tracer::record_guard lck(g_tracer);
 	size_t path_len = strlen(iniPath) + 1;
 	// record size
 	g_tracer.WriteWord(3 + round_up_4(path_len));
@@ -398,13 +394,11 @@ CALLBACK_DEF	COM_API_UploadSystemCfg(const char* iniPath) {
 	g_tracer.WriteBuffer(iniPath, path_len);
 	int res = g_dll.pCOM_API_UploadSystemCfg(iniPath);
 	g_tracer.WriteWord(res);
-	g_tracer.flush();
 	return res;
 }
 
 CALLBACK_DEF	COM_API_DeleteFile(const char* payload, int len) {
-	initialize_once();
-	std::lock_guard<std::mutex> lck(g_tracer.trace_mtx);
+	tracer::record_guard lck(g_tracer);
 	// record size
 	g_tracer.WriteWord(5 + round_up_4(len));
 	// function name
@@ -413,13 +407,11 @@ CALLBACK_DEF	COM_API_DeleteFile(const char* payload, int len) {
 	g_tracer.WriteWord(len);
 	int res = g_dll.pCOM_API_DeleteFile(payload, len);
 	g_tracer.WriteWord(res);
-	g_tracer.flush();
 	return res;
 }
 
 CALLBACK_DEF	COM_API_GetFileName(unsigned char* result) { 
-	initialize_once();
-	std::lock_guard<std::mutex> lck(g_tracer.trace_mtx);
+	tracer::record_guard lck(g_tracer);
 	int res = g_dll.pCOM_API_GetFileName(result);
 	int result_len = strlen((const char*)result)+1;
 	// record size
@@ -428,14 +420,11 @@ CALLBACK_DEF	COM_API_GetFileName(unsigned char* result) {
 	g_tracer.WriteWord(19);
 	g_tracer.WriteBuffer(result, result_len);
 	g_tracer.WriteWord(res);
-	g_tracer.flush();
 	return res;
 }
 
 CALLBACK_DEF	COM_API_StartAutoRun(char a1, char a2, void* Src, int Size, char a5) {
-	initialize_once();
-	std::lock_guard<std::mutex> lck(g_tracer.trace_mtx);
-
+	tracer::record_guard lck(g_tracer);
 	// record size
 	g_tracer.WriteWord(7 + round_up_4(Size));
 	// function name
@@ -447,14 +436,11 @@ CALLBACK_DEF	COM_API_StartAutoRun(char a1, char a2, void* Src, int Size, char a5
 	g_tracer.WriteWord(a5);
 	int res = g_dll.pCOM_API_StartAutoRun(a1, a2, Src, Size, a5);
 	g_tracer.WriteWord(res);
-	g_tracer.flush();
 	return res;
 }
 
 CALLBACK_DEF	COM_API_FastLine3(int a1, int a2, int a3, int a4, int a5) {
-	initialize_once();
-	std::lock_guard<std::mutex> lck(g_tracer.trace_mtx);
-
+	tracer::record_guard lck(g_tracer);
 	// record size
 	g_tracer.WriteWord(8);
 	// function name
@@ -466,13 +452,11 @@ CALLBACK_DEF	COM_API_FastLine3(int a1, int a2, int a3, int a4, int a5) {
 	g_tracer.WriteWord(a5);
 	int res = g_dll.pCOM_API_FastLine3(a1, a2, a3, a4, a5);
 	g_tracer.WriteWord(res);
-	g_tracer.flush();
 	return res;
 }
 
 IMPORTEXPORT int __stdcall	COM_API_UpdateSystemCfg(const char* iniPath) { 
-	initialize_once();
-	std::lock_guard<std::mutex> lck(g_tracer.trace_mtx);
+	tracer::record_guard lck(g_tracer);
 	size_t path_len = strlen(iniPath) + 1;
 	// record size
 	g_tracer.WriteWord(3 + round_up_4(path_len));
@@ -481,6 +465,5 @@ IMPORTEXPORT int __stdcall	COM_API_UpdateSystemCfg(const char* iniPath) {
 	g_tracer.WriteBuffer(iniPath, path_len);
 	int res = g_dll.pCOM_API_UpdateSystemCfg(iniPath);
 	g_tracer.WriteWord(res);
-	g_tracer.flush();
 	return res;
 }

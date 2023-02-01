@@ -23,6 +23,7 @@ extern "C" {
 #define CALLBACK_DEF  extern "C"  IMPORTEXPORT int
 #endif
 
+#ifdef _M_IX86 
 #pragma comment(linker, "/export:COM_API_DeleteFile=_COM_API_DeleteFile@8,@1")
 #pragma comment(linker, "/export:COM_API_DowloadFile=_COM_API_DowloadFile@12,@2")
 #pragma comment(linker, "/export:COM_API_DowloadSystemCfg=_COM_API_DowloadSystemCfg@4,@3")
@@ -45,6 +46,7 @@ extern "C" {
 #pragma comment(linker, "/export:COM_API_StopAxis=_COM_API_StopAxis@12,@20")
 #pragma comment(linker, "/export:COM_API_UploadSystemCfg=_COM_API_UploadSystemCfg@4,@22")
 #pragma comment(linker, "/export:COM_API_WriteFileData=_COM_API_WriteFileData@16,@23")
+#endif
 
 enum AMC4030_ERROR_CODE
 {
