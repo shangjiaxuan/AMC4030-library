@@ -23,7 +23,7 @@ extern "C" {
 #define CALLBACK_DEF  extern "C"  IMPORTEXPORT int
 #endif
 
-#ifdef _M_IX86 
+#if defined(_M_IX86) && defined(_BUILD_SYMBOLS) 
 #pragma comment(linker, "/export:COM_API_DeleteFile=_COM_API_DeleteFile@8,@1")
 #pragma comment(linker, "/export:COM_API_DowloadFile=_COM_API_DowloadFile@12,@2")
 #pragma comment(linker, "/export:COM_API_DowloadSystemCfg=_COM_API_DowloadSystemCfg@4,@3")
