@@ -22,9 +22,18 @@ CALLBACK_DEF	COM_API_PauseAll() { return 0; }
 CALLBACK_DEF	COM_API_ResumeAll() { return 0; }
 
 CALLBACK_DEF	COM_API_UploadSystemCfg(const char* iniPath) { return 0; }
-CALLBACK_DEF	COM_API_DeleteFile(const char* payload, int len) { return 0; }
-CALLBACK_DEF	COM_API_GetFileName(unsigned char* result) { return 0; }
-CALLBACK_DEF	COM_API_StartAutoRun(char a1, char a2, void* Src, int Size, char a5) { return 0; }
+CALLBACK_DEF	COM_API_StartAutoRun(int Type, int nId, char* FileName, int Len, int isRunOnTime) { return 0; }
 
-CALLBACK_DEF	COM_API_FastLine3(int a1, int a2, int a3, int a4, int a5) { return 0; }
-IMPORTEXPORT int __stdcall	COM_API_UpdateSystemCfg(const char* iniPath) { return 0; }
+#if defined(_M_IX86) 
+CALLBACK_DEF	COM_API_DeleteFile(const char* payload, int len) { return 0; }
+CALLBACK_DEF	COM_API_GetFileName(FILE_INFO* result) { return 0; }
+// Unkown usage
+CALLBACK_DEF	COM_API_FastLine3(float a1, float a2, float a3, float a4, float a5) { return 0; }
+#endif
+
+#if defined(_M_X64) 
+// Unkown usage
+IMPORTEXPORT int __stdcall	COM_API_FastLine3(float a1, float a2, float a3, float a4, float a5) { return 0; }
+#endif
+
+IMPORTEXPORT int __stdcall	COM_API_UpdateSystemCfg(char* iniPath) { return 0; }

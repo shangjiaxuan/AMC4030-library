@@ -4,7 +4,10 @@
 #include <stdint.h>
 
 #ifdef __cplusplus
+#define EXTERNAL_C_API extern "C"
 extern "C" {
+#else
+#define EXTERNAL_C_API
 #endif
 
 #ifdef _BUILD_SYMBOLS
@@ -15,12 +18,12 @@ extern "C" {
 
 // x86 stdcall is different from cdecl
 #ifdef _M_IX86 
-#define CALLBACK_DEF  extern "C" IMPORTEXPORT int __stdcall
+#define CALLBACK_DEF  EXTERNAL_C_API IMPORTEXPORT int __stdcall
 #endif
 
 // x64 stdcall is same as cdecl (default)
 #ifdef _M_X64 
-#define CALLBACK_DEF  extern "C"  IMPORTEXPORT int
+#define CALLBACK_DEF  EXTERNAL_C_API  IMPORTEXPORT int
 #endif
 
 #if defined(_M_IX86) && defined(_BUILD_SYMBOLS) 
@@ -44,8 +47,35 @@ extern "C" {
 #pragma comment(linker, "/export:COM_API_StartAutoRun=_COM_API_StartAutoRun@20,@18")
 #pragma comment(linker, "/export:COM_API_StopAll=_COM_API_StopAll@0,@19")
 #pragma comment(linker, "/export:COM_API_StopAxis=_COM_API_StopAxis@12,@20")
+#pragma comment(linker, "/export:?COM_API_UpdateSystemCfg@@YAHPEAD@Z,@21")
 #pragma comment(linker, "/export:COM_API_UploadSystemCfg=_COM_API_UploadSystemCfg@4,@22")
 #pragma comment(linker, "/export:COM_API_WriteFileData=_COM_API_WriteFileData@16,@23")
+#endif
+
+#if defined(_M_X64) && defined(_BUILD_SYMBOLS) 
+//#pragma comment(linker, "/export:COM_API_DeleteFile=_COM_API_DeleteFile@8,@1")
+#pragma comment(linker, "/export:COM_API_DowloadFile,@1")
+#pragma comment(linker, "/export:COM_API_DowloadSystemCfg,@2")
+#pragma comment(linker, "/export:?COM_API_FastLine3@@YAHMMMMM@Z,@3")
+//#pragma comment(linker, "/export:COM_API_GetFileName=_COM_API_GetFileName@4,@5")
+#pragma comment(linker, "/export:COM_API_GetLastError,@4")
+#pragma comment(linker, "/export:COM_API_GetMachineStatus,@5")
+#pragma comment(linker, "/export:COM_API_Home,@6")
+#pragma comment(linker, "/export:COM_API_Jog,@7")
+#pragma comment(linker, "/export:COM_API_OpenLink,@8")
+#pragma comment(linker, "/export:COM_API_PauseAll,@9")
+#pragma comment(linker, "/export:COM_API_ReadData,@10")
+#pragma comment(linker, "/export:COM_API_ReadFileData,@11")
+#pragma comment(linker, "/export:COM_API_ResumeAll,@12")
+#pragma comment(linker, "/export:COM_API_SendData,@13")
+#pragma comment(linker, "/export:COM_API_SetComType,@14")
+#pragma comment(linker, "/export:COM_API_SetOutputBit,@15")
+#pragma comment(linker, "/export:COM_API_StartAutoRun,@16")
+#pragma comment(linker, "/export:COM_API_StopAll,@17")
+#pragma comment(linker, "/export:COM_API_StopAxis,@18")
+#pragma comment(linker, "/export:?COM_API_UpdateSystemCfg@@YAHPEAD@Z,@19")
+#pragma comment(linker, "/export:COM_API_UploadSystemCfg,@20")
+#pragma comment(linker, "/export:COM_API_WriteFileData,@21")
 #endif
 
 enum AMC4030_ERROR_CODE
@@ -83,7 +113,7 @@ typedef struct _MACHINE_STATUS_
 	//	2 - Z OK
 	uint8_t		dwHomeDone;
 	// machine logical ID
-	uint8_t	nID;
+	uint8_t		nID;
 	// firmware version
 	uint16_t	FirmVer;
 	// 100000 times current position
@@ -105,7 +135,7 @@ typedef struct _MACHINE_STATUS_
 	// Input status (bits?)
 	uint16_t 	dwOutputStatus;
 	// reserved
-	uint32_t	Rsv[4];
+	uint32_t	Rsv[5];
 } MACHINE_STATUS, * PMACHINE_STATUS;
 
 CALLBACK_DEF	COM_API_GetMachineStatus(MACHINE_STATUS* unStatus);
@@ -131,7 +161,7 @@ CALLBACK_DEF	COM_API_Home(int nXAxisSet,int nYAxisSet,int nZAxisSet);
 //		1 - Yes
 CALLBACK_DEF	COM_API_StopAxis(int nXAxisSet,int nYAxisSet,int nZAxisSet);
 
-// Stops all movement
+// Stops all movement, also exits auto mode
 CALLBACK_DEF	COM_API_StopAll();
 // (guessed)
 CALLBACK_DEF	COM_API_PauseAll();
@@ -278,12 +308,14 @@ typedef struct _FILE_INFO_
 	int file_total;
 } FILE_INFO, * PFILE_INFO;
 
+#if defined(_M_IX86) 
+
 // get list of files in controller
 CALLBACK_DEF	COM_API_GetFileName(FILE_INFO* fileinfo);
 
 // deletes file from controller
 CALLBACK_DEF	COM_API_DeleteFile(const char* filename, int filename_len);
-
+#endif
 // Starts script inside controller
 //	Type		- file type, 2 for script
 //	nId			- have to be 1
@@ -292,13 +324,18 @@ CALLBACK_DEF	COM_API_DeleteFile(const char* filename, int filename_len);
 //	isRunOnTime	- whether the script is run on startup
 CALLBACK_DEF	COM_API_StartAutoRun(int Type, int nId, char* FileName, int Len, int isRunOnTime);
 
+#if defined(_M_IX86) 
 // Unkown usage
-CALLBACK_DEF	COM_API_FastLine3(int a1, int a2, int a3, int a4, int a5);
-
+CALLBACK_DEF	COM_API_FastLine3(float a1, float a2, float a3, float a4, float a5);
+#endif
 #ifdef __cplusplus
 }
+#if defined(_M_X64) 
 // Unkown usage
-IMPORTEXPORT int __stdcall	COM_API_UpdateSystemCfg(const char* iniPath);
+IMPORTEXPORT int __stdcall	COM_API_FastLine3(float a1, float a2, float a3, float a4, float a5);
+#endif
+// Unkown usage
+IMPORTEXPORT int __stdcall	COM_API_UpdateSystemCfg(char* iniPath);
 #endif
 
 #endif

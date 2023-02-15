@@ -6,5 +6,6 @@
   <ItemGroup>
     <None Include="deps\AMC4030.def" />
     <None Include="deps\AMC4030-x86.def" />
+    <None Include="deps\AMC4030-x64.def" />
   </ItemGroup>
 </Project>

@@ -1,0 +1,22 @@
+EXPORTS
+	COM_API_DowloadFile	@1
+	COM_API_DowloadSystemCfg	@2
+	?COM_API_FastLine3@@YAHMMMMM@Z	@3
+	COM_API_GetLastError	@4
+	COM_API_GetMachineStatus	@5
+	COM_API_Home	@6
+	COM_API_Jog	@7
+	COM_API_OpenLink	@8
+	COM_API_PauseAll	@9
+	COM_API_ReadData	@10
+	COM_API_ReadFileData	@11
+	COM_API_ResumeAll	@12
+	COM_API_SendData	@13
+	COM_API_SetComType	@14
+	COM_API_SetOutputBit	@15
+	COM_API_StartAutoRun	@16
+	COM_API_StopAll	@17
+	COM_API_StopAxis	@18
+	?COM_API_UpdateSystemCfg@@YGHPAD@Z	@19
+	COM_API_UploadSystemCfg	@20
+	COM_API_WriteFileData	@21
